@@ -84,7 +84,24 @@
       (rest words)
       words)))
 
+(def day-3-input (read-line-input "day03-input"))
+
+(defn day3-part1
+  [day-3-input]
+  (let [[id rect] (-> (first day-3-input)
+                      (str/split #" @ "))
+        [start size] (str/split rect #": ")
+        [start-x start-y] (str/split start #",")
+        [size-x size-y] (str/split size #"x")]
+    [id start-x start-y size-x size-y])
+  )
+
 (comment (day1-part1 day-1-input)
          (day1-part2 day-1-input)
          (day2-part1 day-2-input)
-         (day2-part2 day-2-input))
+         (day2-part2 day-2-input)
+         (day3-part1 day-3-input)
+
+         )
+
+
