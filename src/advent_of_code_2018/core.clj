@@ -1,5 +1,6 @@
 (ns advent-of-code-2018.core
   (:require [clojure.java.io :as io]
+            [clojure.set :as set]
             [clojure.string :as str])
   (:gen-class))
 
@@ -86,22 +87,45 @@
 
 (def day-3-input (read-line-input "day03-input"))
 
-(defn day3-part1
-  [day-3-input]
-  (let [[id rect] (-> (first day-3-input)
+(defn claim->coordinates
+  [claim]
+  (let [[id rect] (-> claim
                       (str/split #" @ "))
         [start size] (str/split rect #": ")
         [start-x start-y] (str/split start #",")
-        [size-x size-y] (str/split size #"x")]
-    [id start-x start-y size-x size-y])
-  )
+        [size-x size-y] (str/split size #"x")
+        start-x (Integer/parseInt start-x)
+        start-y (Integer/parseInt start-y)
+        size-x (Integer/parseInt size-x)
+        size-y (Integer/parseInt size-y)]
+    [id
+     (set (for [x (range start-x (+ start-x size-x))
+                y (range start-y (+ start-y size-y))]
+            [x y]))]))
+
+(defn claim-intersections
+  [day-3-input]
+  (->> (map claim->coordinates day-3-input)
+       (reduce (fn [{:keys [:union :intersection]} [_ s]]
+                 (let [new-intersection (set/union (set/intersection union s)
+                                                   intersection)
+                       new-union (set/union union s)]
+                   {:union new-union, :intersection new-intersection}))
+         {:union #{}, :intersection #{}})
+       :intersection))
+
+(defn day3-part1 [day-3-input] (count (claim-intersections day-3-input)))
+
+(defn day3-part2
+  [day-3-input]
+  (let [all-intersections (claim-intersections day-3-input)]
+    (some (fn [[id s]]
+            (when (empty? (set/intersection all-intersections s)) id))
+          (map claim->coordinates day-3-input))))
 
 (comment (day1-part1 day-1-input)
          (day1-part2 day-1-input)
          (day2-part1 day-2-input)
          (day2-part2 day-2-input)
          (day3-part1 day-3-input)
-
-         )
-
-
+         (day3-part2 day-3-input))
