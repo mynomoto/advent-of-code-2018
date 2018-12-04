@@ -123,6 +123,16 @@
             (when (empty? (set/intersection all-intersections s)) id))
           (map claim->coordinates day-3-input))))
 
+(def day-4-input (read-line-input "day04-input"))
+
+(defn day-4-part1
+  [day-4-input]
+  (->> day-4-input
+       sort
+       (partition-by (fn [s]
+                       (let [[_ data] (str/split s #"] ")]
+                         (str/starts-with? data "Guard"))))))
+
 (comment (day1-part1 day-1-input)
          (day1-part2 day-1-input)
          (day2-part1 day-2-input)
