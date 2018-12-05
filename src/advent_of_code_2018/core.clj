@@ -9,10 +9,14 @@
   [& args]
   (println "Hello, World!"))
 
-(defn read-line-input
+(defn read-input
   [filename]
   (-> (io/resource filename)
-      slurp
+      slurp))
+
+(defn read-line-input
+  [filename]
+  (-> (read-input filename)
       str/split-lines))
 
 (def day-1-input (read-line-input "day01-input"))
@@ -140,30 +144,34 @@
       :hour hour
       :minute (Integer/parseInt minute))))
 
-(defn day-4-part1
+(defn sleep-aggregate
+  [input]
+  (->>
+    input
+    sort
+    (map parse-record)
+    (partition-by (fn [r] (= :guard (:type r))))
+    (partition 2)
+    (map
+      (fn [[guard sleep-records]]
+        (let [guard (-> guard
+                        first
+                        :id)
+              sleep-records (partition 2 sleep-records)
+              sleep-summary (mapv (fn [[start end]]
+                                    {:start (:minute start),
+                                     :total (- (:minute end) (:minute start)),
+                                     :minutes-slept (range (:minute start)
+                                                           (:minute end)),
+                                     :end (:minute end)})
+                              sleep-records)]
+          [guard sleep-summary])))
+    (group-by first)
+    (reduce (fn [acc [k v]] (assoc acc k (apply concat (mapv second v)))) {})))
+
+(defn day4-part1
   [day-4-input]
-  (let [aggregate
-          (->> day-4-input
-               sort
-               (map parse-record)
-               (partition-by (fn [r] (= :guard (:type r))))
-               (partition 2)
-               (map (fn [[guard sleep-records]]
-                      (let [guard (-> guard
-                                      first
-                                      :id)
-                            sleep-records (partition 2 sleep-records)
-                            sleep-summary (mapv (fn [[start end]]
-                                                  {:start (:minute start),
-                                                   :total (- (:minute end)
-                                                             (:minute start)),
-                                                   :end (:minute end)})
-                                            sleep-records)]
-                        [guard sleep-summary])))
-               (group-by first)
-               (reduce (fn [acc [k v]]
-                         (assoc acc k (apply concat (mapv second v))))
-                 {}))
+  (let [aggregate (sleep-aggregate day-4-input)
         totals
           (reduce (fn [acc [k v]]
                     (assoc acc
@@ -182,9 +190,74 @@
         guard-id-int (Integer/parseInt (subs max-sleep-id 1))]
     (* most-frequent-minute guard-id-int)))
 
+(defn day4-part2
+  [day-4-input]
+  (let [aggregate (sleep-aggregate day-4-input)
+        all-minutes
+          (->> aggregate
+               (reduce (fn [acc [k v]]
+                         (let [minute->freq
+                                 (frequencies
+                                   (reduce (fn [acc sleep]
+                                             (concat acc
+                                                     (:minutes-slept sleep)))
+                                     []
+                                     v))
+                               max-freq (reduce max 0 (vals minute->freq))
+                               freq->minute (set/map-invert minute->freq)
+                               minute-most-frequent (freq->minute max-freq)]
+                           (conj acc
+                                 {:frequencies minute->freq,
+                                  :max-frequencies max-freq,
+                                  :minute-most-frequent minute-most-frequent,
+                                  :id k})))
+                 []))
+        selected-guard (apply max-key :max-frequencies all-minutes)
+        guard-id-int (Integer/parseInt (subs (:id selected-guard) 1))]
+    (* guard-id-int (:minute-most-frequent selected-guard))))
+
+(def day-5-input (read-input "day05-input"))
+
+(defn toggle-case
+  [c]
+  (if (Character/isUpperCase c)
+    (Character/toLowerCase c)
+    (Character/toUpperCase c)))
+
+(defn react
+  [s]
+  (reduce (fn [acc c]
+            (if (= (toggle-case c) (last acc))
+              (vec (butlast acc))
+              (conj acc c)))
+    []
+    s))
+
+(defn day5-part1
+  [day-5-input]
+  (let [input (str/trim day-5-input)] (count (react (seq input)))))
+
+(defn day5-part2
+  [day-5-input]
+  (let [input (str/trim day-5-input)
+        unit-types (-> input
+                       str/lower-case
+                       distinct)]
+    (reduce min
+      (count input)
+      (for [ut unit-types]
+        (->> input
+             (remove #{ut (Character/toUpperCase ut)})
+             react
+             count)))))
+
 (comment (day1-part1 day-1-input)
          (day1-part2 day-1-input)
          (day2-part1 day-2-input)
          (day2-part2 day-2-input)
          (day3-part1 day-3-input)
-         (day3-part2 day-3-input))
+         (day3-part2 day-3-input)
+         (day4-part1 day-4-input)
+         (day4-part2 day-4-input)
+         (day5-part1 day-5-input)
+         (day5-part2 day-5-input))
