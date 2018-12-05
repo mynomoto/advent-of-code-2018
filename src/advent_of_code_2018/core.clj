@@ -125,13 +125,62 @@
 
 (def day-4-input (read-line-input "day04-input"))
 
+(defn parse-record
+  [record]
+  (let [[date time] (str/split (subs record 1 17) #" ")
+        [hour minute] (str/split time #":")
+        message (subs record 19)
+        parsed-message (cond (str/starts-with? message "Guard")
+                               (let [[_ id & rest] (str/split message #" ")]
+                                 {:type :guard, :id id})
+                             (str/starts-with? message "falls") {:type :sleeps}
+                             (str/starts-with? message "wakes") {:type :wakes})]
+    (assoc parsed-message
+      :date date
+      :hour hour
+      :minute (Integer/parseInt minute))))
+
 (defn day-4-part1
   [day-4-input]
-  (->> day-4-input
-       sort
-       (partition-by (fn [s]
-                       (let [[_ data] (str/split s #"] ")]
-                         (str/starts-with? data "Guard"))))))
+  (let [aggregate
+          (->> day-4-input
+               sort
+               (map parse-record)
+               (partition-by (fn [r] (= :guard (:type r))))
+               (partition 2)
+               (map (fn [[guard sleep-records]]
+                      (let [guard (-> guard
+                                      first
+                                      :id)
+                            sleep-records (partition 2 sleep-records)
+                            sleep-summary (mapv (fn [[start end]]
+                                                  {:start (:minute start),
+                                                   :total (- (:minute end)
+                                                             (:minute start)),
+                                                   :end (:minute end)})
+                                            sleep-records)]
+                        [guard sleep-summary])))
+               (group-by first)
+               (reduce (fn [acc [k v]]
+                         (assoc acc k (apply concat (mapv second v))))
+                 {}))
+        totals
+          (reduce (fn [acc [k v]]
+                    (assoc acc
+                      k (reduce (fn [acc sleep] (+ acc (:total sleep))) 0 v)))
+            {}
+            aggregate)
+        max-sleep (reduce max 0 (vals totals))
+        total->id (set/map-invert totals)
+        max-sleep-id (total->id max-sleep)
+        all-sleep-choosen-guard (get aggregate max-sleep-id)
+        freq (frequencies (mapcat #(range (:start %) (:end %))
+                            all-sleep-choosen-guard))
+        max-frequency (reduce max 0 (vals freq))
+        frequency->minute (set/map-invert freq)
+        most-frequent-minute (frequency->minute max-frequency)
+        guard-id-int (Integer/parseInt (subs max-sleep-id 1))]
+    (* most-frequent-minute guard-id-int)))
 
 (comment (day1-part1 day-1-input)
          (day1-part2 day-1-input)
