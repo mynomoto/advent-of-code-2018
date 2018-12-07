@@ -19,18 +19,18 @@
   (-> (read-input filename)
       str/split-lines))
 
-(def day-1-input (read-line-input "day01-input"))
+(def day1-input (read-line-input "day01-input"))
 
 (defn day1-part1
-  [day-1-input]
-  (->> day-1-input
+  [day1-input]
+  (->> day1-input
        (map #(Integer/parseInt %))
        (apply +)))
 
 (defn day1-part2
-  [day-1-input]
+  [day1-input]
   (->>
-    day-1-input
+    day1-input
     (map #(Integer/parseInt %))
     cycle
     (reduce (fn [{:keys [:frequency :seen]} i]
@@ -40,15 +40,15 @@
                   {:frequency new-frequency, :seen (conj seen new-frequency)})))
       {:frequency 0, :seen #{0}})))
 
-(def day-2-input (read-line-input "day02-input"))
+(def day2-input (read-line-input "day02-input"))
 
 (defn day2-part1
-  [day-2-input]
+  [day2-input]
   (let [freq (map #(-> %
                        frequencies
                        vals
                        set)
-               day-2-input)
+               day2-input)
         twos (count (filter #(% 2) freq))
         threes (count (filter #(% 3) freq))]
     (* twos threes)))
@@ -80,8 +80,8 @@
         (recur acc (subs s1 1) (subs s2 1))))))
 
 (defn day2-part2
-  [day-2-input]
-  (let [words (sort day-2-input)]
+  [day2-input]
+  (let [words (sort day2-input)]
     (reduce (fn [words candidate]
               (if-some [result (check-prototype? candidate words)]
                 (reduced (apply remove-difference "" result))
@@ -89,7 +89,7 @@
       (rest words)
       words)))
 
-(def day-3-input (read-line-input "day03-input"))
+(def day3-input (read-line-input "day03-input"))
 
 (defn claim->coordinates
   [claim]
@@ -108,8 +108,8 @@
             [x y]))]))
 
 (defn claim-intersections
-  [day-3-input]
-  (->> (map claim->coordinates day-3-input)
+  [day3-input]
+  (->> (map claim->coordinates day3-input)
        (reduce (fn [{:keys [:union :intersection]} [_ s]]
                  (let [new-intersection (set/union (set/intersection union s)
                                                    intersection)
@@ -118,16 +118,16 @@
          {:union #{}, :intersection #{}})
        :intersection))
 
-(defn day3-part1 [day-3-input] (count (claim-intersections day-3-input)))
+(defn day3-part1 [day3-input] (count (claim-intersections day3-input)))
 
 (defn day3-part2
-  [day-3-input]
-  (let [all-intersections (claim-intersections day-3-input)]
+  [day3-input]
+  (let [all-intersections (claim-intersections day3-input)]
     (some (fn [[id s]]
             (when (empty? (set/intersection all-intersections s)) id))
-          (map claim->coordinates day-3-input))))
+          (map claim->coordinates day3-input))))
 
-(def day-4-input (read-line-input "day04-input"))
+(def day4-input (read-line-input "day04-input"))
 
 (defn parse-record
   [record]
@@ -170,8 +170,8 @@
     (reduce (fn [acc [k v]] (assoc acc k (apply concat (mapv second v)))) {})))
 
 (defn day4-part1
-  [day-4-input]
-  (let [aggregate (sleep-aggregate day-4-input)
+  [day4-input]
+  (let [aggregate (sleep-aggregate day4-input)
         totals
           (reduce (fn [acc [k v]]
                     (assoc acc
@@ -191,8 +191,8 @@
     (* most-frequent-minute guard-id-int)))
 
 (defn day4-part2
-  [day-4-input]
-  (let [aggregate (sleep-aggregate day-4-input)
+  [day4-input]
+  (let [aggregate (sleep-aggregate day4-input)
         all-minutes
           (->> aggregate
                (reduce (fn [acc [k v]]
@@ -216,7 +216,7 @@
         guard-id-int (Integer/parseInt (subs (:id selected-guard) 1))]
     (* guard-id-int (:minute-most-frequent selected-guard))))
 
-(def day-5-input (read-input "day05-input"))
+(def day5-input (read-input "day05-input"))
 
 (defn toggle-case
   [c]
@@ -234,12 +234,12 @@
     s))
 
 (defn day5-part1
-  [day-5-input]
-  (let [input (str/trim day-5-input)] (count (react (seq input)))))
+  [day5-input]
+  (let [input (str/trim day5-input)] (count (react (seq input)))))
 
 (defn day5-part2
-  [day-5-input]
-  (let [input (str/trim day-5-input)
+  [day5-input]
+  (let [input (str/trim day5-input)
         unit-types (-> input
                        str/lower-case
                        distinct)]
@@ -251,13 +251,41 @@
              react
              count)))))
 
-(comment (day1-part1 day-1-input)
-         (day1-part2 day-1-input)
-         (day2-part1 day-2-input)
-         (day2-part2 day-2-input)
-         (day3-part1 day-3-input)
-         (day3-part2 day-3-input)
-         (day4-part1 day-4-input)
-         (day4-part2 day-4-input)
-         (day5-part1 day-5-input)
-         (day5-part2 day-5-input))
+(def day6-input (read-line-input "day06-input"))
+
+(defn parse-coordinate
+  [coordinate]
+  (let [[x y] (str/split coordinate #", ")]
+    [(Integer/parseInt x) (Integer/parseInt y)]))
+
+(defn calculate-grid
+  [coordinates]
+  {:grid [(reduce (fn [acc [x _y]] (max acc x)) 0 coordinates)
+          (reduce (fn [acc [_x y]] (max acc y)) 0 coordinates)],
+   :coordinates coordinates})
+
+(defn manhattan-distance [p1 p2])
+
+(defn nearest-coordinate
+  [{:keys [grid coordinates]}]
+  (let [[max-x max-y] grid] (for [x max-x y max-y])))
+
+(defn day6-part1
+  [day6-input]
+  (->> day6-input
+       (map parse-coordinate)
+       calculate-grid
+       nearest-coordinate))
+
+(identity day6-input)
+
+(comment (day1-part1 day1-input)
+         (day1-part2 day1-input)
+         (day2-part1 day2-input)
+         (day2-part2 day2-input)
+         (day3-part1 day3-input)
+         (day3-part2 day3-input)
+         (day4-part1 day4-input)
+         (day4-part2 day4-input)
+         (day5-part1 day5-input)
+         (day5-part2 day5-input))
