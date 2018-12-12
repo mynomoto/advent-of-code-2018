@@ -335,55 +335,137 @@
 
 (def day7-input (read-line-input "day07-input"))
 
-(defn parse-dependencies
-  [s]
-  (let [[_ p _ _ _ _ _ q] (str/split s #" ")]
-    [p q]))
+(defn parse-dependencies [s] (let [[_ p _ _ _ _ _ q] (str/split s #" ")] [p q]))
 
 (defn add-all-steps
-  [{:keys [:dependency-order] :as data}]
-  (assoc data :all-steps (set (apply concat dependency-order))))
+  [{:keys [:input], :as data}]
+  (assoc data :all-steps (set (apply concat input))))
 
 (defn add-available-steps
-  [{:keys [:dependency-order :all-steps] :as data}]
-  (let [steps-with-no-dependency (set/difference all-steps (set (map second dependency-order)))]
+  [{:keys [:input :all-steps], :as data}]
+  (let [steps-with-no-dependency (set/difference all-steps
+                                                 (set (map second input)))]
     (assoc data :available-steps (sort steps-with-no-dependency))))
 
 
 (defn run-step
-  [{:keys [:dependency-order :all-steps :available-steps :steps] :as data}]
+  [{:keys [:input :dependency-requisites :all-steps :available-steps :steps],
+    :as data}]
   (let [[first-step & other-steps] available-steps
         new-steps ((fnil conj []) steps first-step)
+        new-steps-set (set new-steps)
         ; FIXME: can only add steps that have all requirements
-        new-available-steps (set/difference (->> dependency-order
-                                                 (filter (fn [[dependency dependant]]
-                                                           (= dependency first-step)))
-                                                 (map (fn [[dependency dependant]] dependant))
-                                                 (concat other-steps)
-                                                 set)
-                              (set new-steps))]
-
-        (assoc data :steps new-steps
-               :available-steps (sort new-available-steps) )
-    ))
+        new-available-steps
+          (set/difference
+            (->> dependency-requisites
+                 (filter (fn [[dependant dependencies]]
+                           (empty? (set/difference dependencies
+                                                   new-steps-set))))
+                 (map (fn [[dependant _]] dependant))
+                 (concat other-steps)
+                 set)
+            new-steps-set)]
+    (assoc data
+      :steps new-steps
+      :available-steps (sort new-available-steps))))
 
 (defn run-all-steps
   [data]
-  (if (empty? (:available-steps data))
-    data
-    (recur (run-step data))))
+  (if (empty? (:available-steps data)) data (recur (run-step data))))
+
+(defn add-dependency-requisites
+  [{:keys [:input], :as data}]
+  (assoc data
+    :dependency-requisites
+      (->> input
+           (group-by second)
+           (reduce-kv (fn [acc k v] (assoc acc k (set (map first v)))) {}))))
 
 (defn day7-part1
   [day7-input]
   (->> day7-input
-      (map parse-dependencies)
-      (hash-map :dependency-order)
-      add-all-steps
-      add-available-steps
-      run-all-steps
-      ; :steps
-      ; str/join
-      ))
+       (map parse-dependencies)
+       (hash-map :input)
+       add-dependency-requisites
+       add-all-steps
+       add-available-steps
+       run-all-steps
+       :steps
+       str/join))
+
+(defn add-time-setup
+  [{:keys [:all-steps], :as data}]
+  (assoc data
+    :required-time (reduce (fn [acc step]
+                             (assoc acc step (- (int (first step)) 4)))
+                     {}
+                     all-steps)
+    :current-time 0
+    :workers {:w0 :idle, :w1 :idle, :w2 :idle, :w3 :idle, :w4 :idle}))
+
+{:finish-at 61, :started-at 0, :task "A"}
+
+(defn update-wip
+  [{:keys [:current-time :workers], :as data}]
+  (let [new-workers (reduce-kv (fn [acc k v]
+                                 (let [new-v (cond (= :idle v) v)]
+                                   (assoc acc k new-v)))
+                               {}
+                               workers)]
+    (assoc data :workers new-workers)))
+
+(defn find-idle-worker
+  [workers]
+  (cond (= :idle (:w0 workers)) :w0
+        (= :idle (:w1 workers)) :w1
+        (= :idle (:w2 workers)) :w2
+        (= :idle (:w3 workers)) :w3
+        (= :idle (:w4 workers)) :w4))
+
+(defn allocate-work
+  [{:keys [:current-time :workers :available-steps :required-time], :as data}]
+  (if-some [available-worker (find-idle-worker workers)]
+    (if (empty? available-steps)
+      data
+      (recur (-> data
+                 (assoc-in
+                   [:workers available-worker]
+                   {:task (first available-steps),
+                    :stated-at current-time,
+                    :finish-at (+ current-time
+                                  (get required-time (first available-steps)))})
+                 (assoc :available-steps (rest available-steps)))))
+    data))
+
+(defn increment-time [data] (update data :current-time inc))
+
+(defn run-time-step
+  [data]
+  (-> data
+      update-wip
+      allocate-work
+      increment-time))
+
+(defn run-all-steps-with-time
+  [data]
+  (if (= (set (:steps data)) (:all-steps data))
+    data
+    (recur (run-time-step data))))
+
+(defn day7-part2
+  [day7-input]
+  (->> day7-input
+       (map parse-dependencies)
+       (hash-map :input)
+       add-dependency-requisites
+       add-all-steps
+       add-available-steps
+       add-time-setup
+       run-time-step
+       ; run-all-steps-with-time
+       ; :steps
+       ; str/join
+    ))
 
 (comment (day1-part1 day1-input)
          (day1-part2 day1-input)
