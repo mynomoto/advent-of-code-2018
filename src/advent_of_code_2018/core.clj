@@ -264,20 +264,74 @@
           (reduce (fn [acc [_x y]] (max acc y)) 0 coordinates)],
    :coordinates coordinates})
 
-(defn manhattan-distance [p1 p2])
+(defn abs [n] (if (neg? n) (- n) n))
+
+(defn manhattan-distance [[x1 y1] [x2 y2]] (+ (abs (- x2 x1)) (abs (- y2 y1))))
+
+(defn find-nearest-coordinate
+  [p coordinates]
+  (reduce (fn [[_minimum-coordinate minimum-distance :as current] coordinate]
+            (let [d (manhattan-distance p coordinate)]
+              (cond (< d minimum-distance) [coordinate d]
+                    (= d minimum-distance) [:tie d]
+                    :else current)))
+    [:none 1000000]
+    coordinates))
 
 (defn nearest-coordinate
-  [{:keys [grid coordinates]}]
-  (let [[max-x max-y] grid] (for [x max-x y max-y])))
+  [{:keys [:grid :coordinates], :as data}]
+  (let [[max-x max-y] grid]
+    (assoc data
+      :nearest (for [x (range (inc max-x))
+                     y (range (inc max-y))]
+                 [[x y] (find-nearest-coordinate [x y] coordinates)]))))
+
+(defn remove-infinity-and-ties
+  [{:keys [:grid :nearest], :as data}]
+  (let [[max-x max-y] grid
+        to-remove (->> nearest
+                       (filter (fn [[[x y] _]]
+                                 (or (= x 0) (= y 0) (= x max-x) (= y max-y))))
+                       (map (fn [[_ [p _]]] p))
+                       set)]
+    (update data
+            :nearest
+            #(remove (fn [[_ [p _]]] (contains? to-remove p)) %))))
 
 (defn day6-part1
   [day6-input]
   (->> day6-input
        (map parse-coordinate)
        calculate-grid
-       nearest-coordinate))
+       nearest-coordinate
+       remove-infinity-and-ties
+       :nearest
+       (map (fn [[_ [p _]]] p))
+       frequencies
+       (apply max-key second)
+       second))
 
-(identity day6-input)
+(defn total-distance
+  [p coordinates]
+  (apply + (map #(manhattan-distance % p) coordinates)))
+
+(defn distance-to-all-coordinates
+  [{:keys [:grid :coordinates], :as data}]
+  (let [[max-x max-y] grid]
+    (assoc data
+      :distance (for [x (range (inc max-x))
+                      y (range (inc max-y))]
+                  [[x y] (total-distance [x y] coordinates)]))))
+
+(defn day6-part2
+  [day6-input]
+  (->> day6-input
+       (map parse-coordinate)
+       calculate-grid
+       distance-to-all-coordinates
+       :distance
+       (filter (fn [[p distance]] (< distance 10000)))
+       count))
 
 (comment (day1-part1 day1-input)
          (day1-part2 day1-input)
@@ -288,4 +342,7 @@
          (day4-part1 day4-input)
          (day4-part2 day4-input)
          (day5-part1 day5-input)
-         (day5-part2 day5-input))
+         (day5-part2 day5-input)
+         (day6-part1 day6-input)
+         (day6-part2 day6-input)
+         (clojure.repl/pst))
