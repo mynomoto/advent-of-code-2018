@@ -333,6 +333,58 @@
        (filter (fn [[p distance]] (< distance 10000)))
        count))
 
+(def day7-input (read-line-input "day07-input"))
+
+(defn parse-dependencies
+  [s]
+  (let [[_ p _ _ _ _ _ q] (str/split s #" ")]
+    [p q]))
+
+(defn add-all-steps
+  [{:keys [:dependency-order] :as data}]
+  (assoc data :all-steps (set (apply concat dependency-order))))
+
+(defn add-available-steps
+  [{:keys [:dependency-order :all-steps] :as data}]
+  (let [steps-with-no-dependency (set/difference all-steps (set (map second dependency-order)))]
+    (assoc data :available-steps (sort steps-with-no-dependency))))
+
+
+(defn run-step
+  [{:keys [:dependency-order :all-steps :available-steps :steps] :as data}]
+  (let [[first-step & other-steps] available-steps
+        new-steps ((fnil conj []) steps first-step)
+        ; FIXME: can only add steps that have all requirements
+        new-available-steps (set/difference (->> dependency-order
+                                                 (filter (fn [[dependency dependant]]
+                                                           (= dependency first-step)))
+                                                 (map (fn [[dependency dependant]] dependant))
+                                                 (concat other-steps)
+                                                 set)
+                              (set new-steps))]
+
+        (assoc data :steps new-steps
+               :available-steps (sort new-available-steps) )
+    ))
+
+(defn run-all-steps
+  [data]
+  (if (empty? (:available-steps data))
+    data
+    (recur (run-step data))))
+
+(defn day7-part1
+  [day7-input]
+  (->> day7-input
+      (map parse-dependencies)
+      (hash-map :dependency-order)
+      add-all-steps
+      add-available-steps
+      run-all-steps
+      ; :steps
+      ; str/join
+      ))
+
 (comment (day1-part1 day1-input)
          (day1-part2 day1-input)
          (day2-part1 day2-input)
@@ -345,4 +397,5 @@
          (day5-part2 day5-input)
          (day6-part1 day6-input)
          (day6-part2 day6-input)
+         (day7-part1 day7-input)
          (clojure.repl/pst))
