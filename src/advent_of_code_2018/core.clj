@@ -403,16 +403,23 @@
     :current-time 0
     :workers {:w0 :idle, :w1 :idle, :w2 :idle, :w3 :idle, :w4 :idle}))
 
-{:finish-at 61, :started-at 0, :task "A"}
-
 (defn update-wip
-  [{:keys [:current-time :workers], :as data}]
+  [{:keys [:current-time :workers :steps], :as data}]
+  (prn :workers workers)
+  (prn :current-time current-time)
   (let [new-workers (reduce-kv (fn [acc k v]
-                                 (let [new-v (cond (= :idle v) v)]
-                                   (assoc acc k new-v)))
+                                 (prn acc k v)
+                                 (let [new-v (cond
+                                               (= :idle v) :idle
+                                               (= (inc (:finish-at v)) current-time) :idle
+                                               :else v)]
+                                   (cond-> (assoc acc k new-v)
+                                     (not= v new-v) (update :finished-step (fnil conj []) (:task v)))))
                                {}
                                workers)]
-    (assoc data :workers new-workers)))
+    (-> data
+        (assoc :workers (dissoc new-workers :finished-step))
+        (assoc :steps (into (or steps []) (sort (:finished-step new-workers)))))))
 
 (defn find-idle-worker
   [workers]
@@ -437,7 +444,10 @@
                  (assoc :available-steps (rest available-steps)))))
     data))
 
-(defn increment-time [data] (update data :current-time inc))
+(defn increment-time
+  [{:keys [:workers] :as data}]
+  (prn (remove #{:idle} (vals workers)))
+  (assoc data :current-time (inc (reduce min 99999999999 (map :finish-at (remove #{:idle} (vals workers)))))))
 
 (defn run-time-step
   [data]
@@ -461,8 +471,9 @@
        add-all-steps
        add-available-steps
        add-time-setup
-       run-time-step
-       ; run-all-steps-with-time
+       ; run-time-step
+       ; run-time-step
+       run-all-steps-with-time
        ; :steps
        ; str/join
     ))
