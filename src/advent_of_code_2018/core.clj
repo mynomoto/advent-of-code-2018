@@ -495,6 +495,60 @@
        run-all-steps-with-time
        :current-time))
 
+(def day8-input (read-input "day08-input"))
+(def day8-test-input "2 3 0 3 10 11 12 1 1 0 1 99 2 1 1 2")
+(do
+(defn parse-single-node
+  [entries]
+  (let [[n-child-nodes n-metadata-entries] (take 2 entries)
+        child-entries (drop 2 entries)
+        n-child-entries (count child-entries)]
+    {:node 
+     :rest})
+  )
+
+(comment
+(cond (= 0 n-child-nodes) {:metadata (take n-metadata-entries child-entries)}
+      (= 1 n) {:metadata (take n-metadata-entries
+                               (drop (- n-child-entries n-metadata-entries)
+                                     child-entries))})
+  )
+
+(defn parse-nodes
+  [n entries]
+  (case n
+    0 (throw (ex-info "Should not get here: parsing 0 nodes" {}))
+    1 (let [[n-child-nodes n-metadata-entries] (take 2 entries)
+            child-entries (drop 2 entries)
+            n-child-entries (count child-entries)]
+        [{:n-child-entries (count child-entries)
+          :n-child-nodes n-child-nodes
+          :n-metadata-entries n-metadata-entries
+          :child-nodes (parse-nodes n-child-nodes (take (- n-child-entries n-metadata-entries) child-entries))
+          :metadata (take n-metadata-entries (drop (- n-child-entries n-metadata-entries) child-entries))} nil])
+    2 (let [[n-child-nodes n-metadata-entries] (take 2 entries)
+            child-entries (drop 2 entries)
+            n-child-entries (count child-entries)]
+        [{:n-child-entries (count child-entries)
+          :n-child-nodes n-child-nodes
+          :n-metadata-entries n-metadata-entries
+          :child-nodes (if (zero? n-child-nodes)
+                         []
+                         (parse-nodes n-child-nodes child-entries))
+          } nil])
+    ))
+
+(defn day8-part1
+  [day8-input]
+  (-> day8-input
+      str/trim
+      (str/split #" ")
+      (->> (map #(Integer/parseInt %))
+           (parse-nodes 1 ))
+      )
+  )
+(day8-part1 day8-test-input)
+)
 (comment (day1-part1 day1-input)
          (day1-part2 day1-input)
          (day2-part1 day2-input)
@@ -508,4 +562,6 @@
          (day6-part1 day6-input)
          (day6-part2 day6-input)
          (day7-part1 day7-input)
-         (day7-part2 day7-input))
+         (day7-part2 day7-input)
+         (day8-part1 day8-input)
+         )
